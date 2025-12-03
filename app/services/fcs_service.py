@@ -30,6 +30,27 @@ class FCSService:
         except Exception as e:
             print(f"Warning: Could not load default FCS file: {e}")
     
+    def _determine_display(self, param_name: str) -> str:
+        """Determine display type based on parameter name.
+        
+        Linear display for: FSC, SSC, Width, Time
+        Logarithmic display for: others
+        
+        Args:
+            param_name: Parameter name (e.g., "FSC-H", "CD3-FITC")
+            
+        Returns:
+            "LIN" or "LOG"
+        """
+        linear_keywords = ['FSC', 'SSC', 'WIDTH', 'TIME']
+        param_upper = param_name.upper()
+        
+        for keyword in linear_keywords:
+            if keyword in param_upper:
+                return 'LIN'
+        
+        return 'LOG'
+    
     def get_parameters(self) -> Dict[str, Any]:
         """Get FCS parameters information.
         
@@ -49,7 +70,9 @@ class FCSService:
             pnn = self.default_fcs.text.get(f'$P{i}N', f'P{i}')
             pns = self.default_fcs.text.get(f'$P{i}S', pnn)
             pnr = int(self.default_fcs.text.get(f'$P{i}R', 1024))
-            display = self.default_fcs.text.get(f'$P{i}D', 'LIN')
+            
+            # Determine display type based on parameter name
+            display = self._determine_display(pnn)
             
             parameters.append({
                 "index": i,
@@ -124,7 +147,9 @@ class FCSService:
         for i in range(self.default_fcs.channel_count):
             pnn = self.default_fcs.text.get(f'$P{i+1}N', f'P{i+1}')
             pns = self.default_fcs.text.get(f'$P{i+1}S', pnn)
-            display = self.default_fcs.text.get(f'$P{i+1}D', 'LIN')
+            
+            # Determine display type based on parameter name
+            display = self._determine_display(pnn)
             
             param_data = data[:, i]
             
