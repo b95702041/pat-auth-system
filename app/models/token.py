@@ -13,7 +13,7 @@ class Token(Base):
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     name = Column(String, nullable=False)
-    token_prefix = Column(String(8), index=True, nullable=False)  # First 8 chars for lookup
+    token_prefix = Column(String(12), index=True, nullable=False)  # pat_ + 8 chars = 12 chars
     token_hash = Column(String, nullable=False)  # SHA-256 hash
     scopes = Column(JSON, nullable=False)  # List of scopes
     is_revoked = Column(Boolean, default=False)

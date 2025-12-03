@@ -39,7 +39,7 @@ def upgrade() -> None:
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('user_id', sa.String(), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
-        sa.Column('token_prefix', sa.String(length=8), nullable=False),
+        sa.Column('token_prefix', sa.String(length=12), nullable=False),
         sa.Column('token_hash', sa.String(), nullable=False),
         sa.Column('scopes', sa.JSON(), nullable=False),
         sa.Column('is_revoked', sa.Boolean(), nullable=True),
