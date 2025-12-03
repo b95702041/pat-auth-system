@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends
 from app.dependencies.auth import require_scope
 from app.schemas.common import SuccessResponse
+from app.schemas.auth import AuthContext
 from app.core.permissions import Permission
 
 router = APIRouter(prefix="/api/v1/workspaces", tags=["Workspaces"])
@@ -9,20 +10,19 @@ router = APIRouter(prefix="/api/v1/workspaces", tags=["Workspaces"])
 
 @router.get("", response_model=SuccessResponse)
 def list_workspaces(
-    user_token: tuple = Depends(require_scope(Permission.WORKSPACES_READ))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.WORKSPACES_READ))
 ):
     """List workspaces (requires workspaces:read).
     
     This is a stub implementation showing permission verification.
     """
-    user, token = user_token
-    
     return SuccessResponse(
         data={
             "endpoint": "/api/v1/workspaces",
             "method": "GET",
             "required_scope": Permission.WORKSPACES_READ,
-            "your_scopes": token.scopes,
+            "your_scopes": auth_ctx.user_scopes,
+            "granted_by": auth_ctx.granted_by,
             "message": "This is a stub endpoint demonstrating permission control"
         }
     )
@@ -30,20 +30,19 @@ def list_workspaces(
 
 @router.post("", response_model=SuccessResponse)
 def create_workspace(
-    user_token: tuple = Depends(require_scope(Permission.WORKSPACES_WRITE))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.WORKSPACES_WRITE))
 ):
     """Create workspace (requires workspaces:write).
     
     This is a stub implementation showing permission verification.
     """
-    user, token = user_token
-    
     return SuccessResponse(
         data={
             "endpoint": "/api/v1/workspaces",
             "method": "POST",
             "required_scope": Permission.WORKSPACES_WRITE,
-            "your_scopes": token.scopes,
+            "your_scopes": auth_ctx.user_scopes,
+            "granted_by": auth_ctx.granted_by,
             "message": "This is a stub endpoint demonstrating permission control"
         }
     )
@@ -52,20 +51,19 @@ def create_workspace(
 @router.delete("/{workspace_id}", response_model=SuccessResponse)
 def delete_workspace(
     workspace_id: str,
-    user_token: tuple = Depends(require_scope(Permission.WORKSPACES_DELETE))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.WORKSPACES_DELETE))
 ):
     """Delete workspace (requires workspaces:delete).
     
     This is a stub implementation showing permission verification.
     """
-    user, token = user_token
-    
     return SuccessResponse(
         data={
             "endpoint": f"/api/v1/workspaces/{workspace_id}",
             "method": "DELETE",
             "required_scope": Permission.WORKSPACES_DELETE,
-            "your_scopes": token.scopes,
+            "your_scopes": auth_ctx.user_scopes,
+            "granted_by": auth_ctx.granted_by,
             "message": "This is a stub endpoint demonstrating permission control"
         }
     )
@@ -74,20 +72,19 @@ def delete_workspace(
 @router.put("/{workspace_id}/settings", response_model=SuccessResponse)
 def update_workspace_settings(
     workspace_id: str,
-    user_token: tuple = Depends(require_scope(Permission.WORKSPACES_ADMIN))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.WORKSPACES_ADMIN))
 ):
     """Update workspace settings (requires workspaces:admin).
     
     This is a stub implementation showing permission verification.
     """
-    user, token = user_token
-    
     return SuccessResponse(
         data={
             "endpoint": f"/api/v1/workspaces/{workspace_id}/settings",
             "method": "PUT",
             "required_scope": Permission.WORKSPACES_ADMIN,
-            "your_scopes": token.scopes,
+            "your_scopes": auth_ctx.user_scopes,
+            "granted_by": auth_ctx.granted_by,
             "message": "This is a stub endpoint demonstrating permission control"
         }
     )

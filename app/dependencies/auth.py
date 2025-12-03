@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.token import Token
 from app.schemas.user import TokenData
+from app.schemas.auth import AuthContext
 from app.core.security import verify_token_hash, verify_token
 from app.core.permissions import check_permission
 from app.services.audit_service import log_token_usage
@@ -67,7 +68,11 @@ def get_current_user_from_pat(
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization header"
+            detail={
+                "success": False,
+                "error": "Unauthorized",
+                "message": "Invalid authorization header"
+            }
         )
     
     token_string = authorization.replace("Bearer ", "")
@@ -81,7 +86,11 @@ def get_current_user_from_pat(
     if not tokens:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            detail={
+                "success": False,
+                "error": "Unauthorized",
+                "message": "Invalid token"
+            }
         )
     
     # Verify hash
@@ -94,21 +103,33 @@ def get_current_user_from_pat(
     if not valid_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            detail={
+                "success": False,
+                "error": "Unauthorized",
+                "message": "Invalid token"
+            }
         )
     
     # Check if token is revoked
     if valid_token.is_revoked:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token revoked"
+            detail={
+                "success": False,
+                "error": "Unauthorized",
+                "message": "Token revoked"
+            }
         )
     
     # Check if token is expired
     if valid_token.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired"
+            detail={
+                "success": False,
+                "error": "Unauthorized",
+                "message": "Token expired"
+            }
         )
     
     # Update last used time
@@ -120,7 +141,11 @@ def get_current_user_from_pat(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
+            detail={
+                "success": False,
+                "error": "Unauthorized",
+                "message": "User not found"
+            }
         )
     
     return user, valid_token
@@ -133,17 +158,17 @@ def require_scope(required_scope: str) -> Callable:
         required_scope: The scope required for this endpoint
         
     Returns:
-        Dependency function that checks scope
+        Dependency function that checks scope and returns AuthContext
     """
     def scope_checker(
         request: Request,
         user_token: tuple[User, Token] = Depends(get_current_user_from_pat),
         db: Session = Depends(get_db)
-    ) -> tuple[User, Token]:
+    ) -> AuthContext:
         user, token = user_token
         
-        # Check permission
-        has_permission = check_permission(required_scope, token.scopes)
+        # Check permission (new signature returns tuple)
+        has_permission, granted_by = check_permission(token.scopes, required_scope)
         
         # Log the attempt
         client_ip = request.client.host if request.client else "unknown"
@@ -171,6 +196,13 @@ def require_scope(required_scope: str) -> Callable:
                 }
             )
         
-        return user, token
+        # Return AuthContext with all relevant information
+        return AuthContext(
+            token_id=token.id,
+            user_id=user.id,
+            required_scope=required_scope,
+            granted_by=granted_by,
+            user_scopes=token.scopes
+        )
     
     return scope_checker

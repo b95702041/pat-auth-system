@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies.auth import require_scope
 from app.schemas.common import SuccessResponse
+from app.schemas.auth import AuthContext
 from app.core.permissions import Permission
 from app.services.fcs_service import FCSService
 
@@ -16,7 +17,7 @@ fcs_service = FCSService()
 
 @router.get("/parameters", response_model=SuccessResponse)
 def get_fcs_parameters(
-    user_token: tuple = Depends(require_scope(Permission.FCS_READ))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.FCS_READ))
 ):
     """Get FCS file parameters (requires fcs:read).
     
@@ -31,7 +32,7 @@ def get_fcs_parameters(
 def get_fcs_events(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    user_token: tuple = Depends(require_scope(Permission.FCS_READ))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.FCS_READ))
 ):
     """Get FCS events data with pagination (requires fcs:read).
     
@@ -50,22 +51,20 @@ def get_fcs_events(
 @router.post("/upload", response_model=SuccessResponse)
 def upload_fcs_file(
     file: UploadFile = File(...),
-    user_token: tuple = Depends(require_scope(Permission.FCS_WRITE)),
+    auth_ctx: AuthContext = Depends(require_scope(Permission.FCS_WRITE)),
     db: Session = Depends(get_db)
 ):
     """Upload an FCS file (requires fcs:write).
     
     Args:
         file: FCS file to upload
-        user_token: Authenticated user and token
+        auth_ctx: Authentication context
         db: Database session
         
     Returns:
         Uploaded file information
     """
-    user, token = user_token
-    
-    fcs_file = fcs_service.upload_file(db, user.id, file)
+    fcs_file = fcs_service.upload_file(db, auth_ctx.user_id, file)
     
     return SuccessResponse(
         data={
@@ -79,7 +78,7 @@ def upload_fcs_file(
 
 @router.get("/statistics", response_model=SuccessResponse)
 def get_fcs_statistics(
-    user_token: tuple = Depends(require_scope(Permission.FCS_ANALYZE))
+    auth_ctx: AuthContext = Depends(require_scope(Permission.FCS_ANALYZE))
 ):
     """Get statistical analysis of FCS data (requires fcs:analyze).
     

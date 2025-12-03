@@ -1,6 +1,6 @@
 """Permission management with hierarchical scopes."""
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 
 
 class Permission(str, Enum):
@@ -22,8 +22,27 @@ class Permission(str, Enum):
     FCS_READ = "fcs:read"
 
 
-# Define hierarchical permission structure
-# Higher permissions automatically include lower ones within the same resource
+# Define hierarchical permission structure with numeric levels
+PERMISSION_HIERARCHY: Dict[str, Dict[str, int]] = {
+    "workspaces": {
+        "admin": 4,
+        "delete": 3,
+        "write": 2,
+        "read": 1
+    },
+    "users": {
+        "write": 2,
+        "read": 1
+    },
+    "fcs": {
+        "analyze": 3,
+        "write": 2,
+        "read": 1
+    }
+}
+
+
+# Define hierarchical permission structure (ordered list, high to low)
 RESOURCE_PERMISSIONS: Dict[str, List[str]] = {
     "workspaces": [
         Permission.WORKSPACES_ADMIN,
@@ -41,6 +60,63 @@ RESOURCE_PERMISSIONS: Dict[str, List[str]] = {
         Permission.FCS_READ,
     ],
 }
+
+
+def validate_scope(scope: str) -> bool:
+    """Validate if a single scope is valid.
+    
+    Args:
+        scope: Scope string like "workspaces:read"
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    if not scope or ":" not in scope:
+        return False
+    
+    parts = scope.split(":")
+    if len(parts) != 2:
+        return False
+    
+    resource, action = parts
+    
+    # Check if resource exists
+    if resource not in PERMISSION_HIERARCHY:
+        return False
+    
+    # Check if action exists for this resource
+    if action not in PERMISSION_HIERARCHY[resource]:
+        return False
+    
+    return True
+
+
+def validate_scopes(scopes: List[str]) -> bool:
+    """Validate if all scopes in the list are valid.
+    
+    Args:
+        scopes: List of scope strings
+        
+    Returns:
+        True if all are valid, False otherwise
+    """
+    if not scopes:
+        return False
+    
+    return all(validate_scope(scope) for scope in scopes)
+
+
+def get_all_valid_scopes() -> List[str]:
+    """Get list of all valid scopes.
+    
+    Returns:
+        List of all valid scope strings
+    """
+    all_scopes = []
+    for resource, actions in PERMISSION_HIERARCHY.items():
+        for action in actions.keys():
+            all_scopes.append(f"{resource}:{action}")
+    return sorted(all_scopes)
 
 
 def get_resource_from_scope(scope: str) -> str:
@@ -77,7 +153,7 @@ def get_granted_permissions(scope: str) -> List[str]:
     return resource_hierarchy[scope_index:]
 
 
-def check_permission(required_scope: str, user_scopes: List[str]) -> bool:
+def check_permission(user_scopes: List[str], required_scope: str) -> Tuple[bool, Optional[str]]:
     """Check if user has required permission.
     
     Hierarchical rules:
@@ -85,11 +161,13 @@ def check_permission(required_scope: str, user_scopes: List[str]) -> bool:
     - Permissions do NOT cross resources
     
     Args:
-        required_scope: The permission required (e.g., "workspaces:read")
         user_scopes: List of scopes the user has
+        required_scope: The permission required (e.g., "workspaces:read")
         
     Returns:
-        True if user has required permission, False otherwise
+        Tuple of (is_authorized, granted_by_scope)
+        - (True, "workspaces:admin") if authorized by workspaces:admin
+        - (False, None) if not authorized
     """
     # Get resource of required scope
     required_resource = get_resource_from_scope(required_scope)
@@ -107,9 +185,9 @@ def check_permission(required_scope: str, user_scopes: List[str]) -> bool:
         
         # Check if required scope is granted
         if required_scope in granted_permissions:
-            return True
+            return True, user_scope
     
-    return False
+    return False, None
 
 
 def get_highest_scope(scopes: List[str], resource: str) -> str:
