@@ -68,13 +68,20 @@ class UserService:
         Raises:
             HTTPException: If authentication fails
         """
-        # Find user
-        user = db.query(User).filter(User.username == login_data.username).first()
+        # Find user by email
+        user = db.query(User).filter(User.email == login_data.email).first()
         
         if not user or not verify_password(login_data.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password"
+                detail="Incorrect email or password"
+            )
+        
+        # Check if user is active
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User account is inactive"
             )
         
         # Create JWT token

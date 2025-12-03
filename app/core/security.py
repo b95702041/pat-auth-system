@@ -36,6 +36,26 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
+def verify_token(token: str) -> dict:
+    """Verify and decode a JWT token.
+    
+    Args:
+        token: The JWT token string
+        
+    Returns:
+        Decoded token payload
+        
+    Raises:
+        JWTError: If token is invalid or expired
+    """
+    from jose import JWTError
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload
+    except JWTError as e:
+        raise e
+
+
 def generate_pat_token() -> str:
     """Generate a Personal Access Token.
     

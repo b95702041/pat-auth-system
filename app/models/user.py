@@ -1,5 +1,5 @@
 """User model."""
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -14,6 +14,7 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

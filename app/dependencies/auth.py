@@ -2,7 +2,7 @@
 from typing import Callable
 from fastapi import Depends, HTTPException, status, Request, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+from jose import JWTError
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.token import Token
 from app.schemas.user import TokenData
-from app.core.security import verify_token_hash
+from app.core.security import verify_token_hash, verify_token
 from app.core.permissions import check_permission
 from app.services.audit_service import log_token_usage
 
@@ -32,7 +32,7 @@ async def get_current_user(
     
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = verify_token(token)
         user_id: str = payload.get("user_id")
         if user_id is None:
             raise credentials_exception
@@ -43,6 +43,13 @@ async def get_current_user(
     user = db.query(User).filter(User.id == token_data.user_id).first()
     if user is None:
         raise credentials_exception
+    
+    # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive"
+        )
     
     return user
 
