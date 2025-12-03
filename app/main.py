@@ -25,7 +25,7 @@ app.state.limiter = limiter
 
 # Exception handlers
 @app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     """Handle rate limit exceeded."""
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -40,7 +40,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -62,14 +62,14 @@ app.include_router(fcs.router)
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
+def health_check():
     """Health check endpoint - returns simple status."""
     return {"status": "ok"}
 
 
 # Root endpoint
 @app.get("/")
-async def root():
+def root():
     """Root endpoint with API information."""
     return {
         "success": True,

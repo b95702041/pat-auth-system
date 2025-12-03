@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/v1/workspaces", tags=["Workspaces"])
 
 
 @router.get("", response_model=SuccessResponse)
-async def list_workspaces(
+def list_workspaces(
     user_token: tuple = Depends(require_scope(Permission.WORKSPACES_READ))
 ):
     """List workspaces (requires workspaces:read).
@@ -29,7 +29,7 @@ async def list_workspaces(
 
 
 @router.post("", response_model=SuccessResponse)
-async def create_workspace(
+def create_workspace(
     user_token: tuple = Depends(require_scope(Permission.WORKSPACES_WRITE))
 ):
     """Create workspace (requires workspaces:write).
@@ -50,7 +50,7 @@ async def create_workspace(
 
 
 @router.delete("/{workspace_id}", response_model=SuccessResponse)
-async def delete_workspace(
+def delete_workspace(
     workspace_id: str,
     user_token: tuple = Depends(require_scope(Permission.WORKSPACES_DELETE))
 ):
@@ -72,7 +72,7 @@ async def delete_workspace(
 
 
 @router.put("/{workspace_id}/settings", response_model=SuccessResponse)
-async def update_workspace_settings(
+def update_workspace_settings(
     workspace_id: str,
     user_token: tuple = Depends(require_scope(Permission.WORKSPACES_ADMIN))
 ):

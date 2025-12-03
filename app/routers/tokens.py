@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/tokens", tags=["Tokens"])
 
 
 @router.post("", response_model=SuccessResponse, status_code=status.HTTP_201_CREATED)
-async def create_token(
+def create_token(
     token_data: TokenCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_token(
 
 
 @router.get("", response_model=SuccessResponse)
-async def list_tokens(
+def list_tokens(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -83,7 +83,7 @@ async def list_tokens(
 
 
 @router.get("/{token_id}", response_model=SuccessResponse)
-async def get_token(
+def get_token(
     token_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -115,7 +115,7 @@ async def get_token(
 
 
 @router.delete("/{token_id}", response_model=SuccessResponse)
-async def revoke_token(
+def revoke_token(
     token_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -141,7 +141,7 @@ async def revoke_token(
 
 
 @router.get("/{token_id}/logs", response_model=SuccessResponse)
-async def get_token_audit_logs(
+def get_token_audit_logs(
     token_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

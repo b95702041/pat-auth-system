@@ -19,7 +19,7 @@ settings = get_settings()
 security = HTTPBearer()
 
 
-async def get_current_user(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
@@ -54,7 +54,7 @@ async def get_current_user(
     return user
 
 
-async def get_current_user_from_pat(
+def get_current_user_from_pat(
     request: Request,
     authorization: str = Header(None),
     db: Session = Depends(get_db)
@@ -135,7 +135,7 @@ def require_scope(required_scope: str) -> Callable:
     Returns:
         Dependency function that checks scope
     """
-    async def scope_checker(
+    def scope_checker(
         request: Request,
         user_token: tuple[User, Token] = Depends(get_current_user_from_pat),
         db: Session = Depends(get_db)
@@ -147,7 +147,7 @@ def require_scope(required_scope: str) -> Callable:
         
         # Log the attempt
         client_ip = request.client.host if request.client else "unknown"
-        await log_token_usage(
+        log_token_usage(
             db=db,
             token_id=token.id,
             ip_address=client_ip,

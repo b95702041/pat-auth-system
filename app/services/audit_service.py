@@ -7,7 +7,7 @@ from app.models.audit_log import AuditLog
 from app.models.token import Token
 
 
-async def log_token_usage(
+def log_token_usage(
     db: Session,
     token_id: str,
     ip_address: str,

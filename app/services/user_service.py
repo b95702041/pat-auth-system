@@ -68,13 +68,13 @@ class UserService:
         Raises:
             HTTPException: If authentication fails
         """
-        # Find user by email
-        user = db.query(User).filter(User.email == login_data.email).first()
+        # Find user by username
+        user = db.query(User).filter(User.username == login_data.username).first()
         
         if not user or not verify_password(login_data.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password"
+                detail="Incorrect username or password"
             )
         
         # Check if user is active

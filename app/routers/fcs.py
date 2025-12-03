@@ -15,7 +15,7 @@ fcs_service = FCSService()
 
 
 @router.get("/parameters", response_model=SuccessResponse)
-async def get_fcs_parameters(
+def get_fcs_parameters(
     user_token: tuple = Depends(require_scope(Permission.FCS_READ))
 ):
     """Get FCS file parameters (requires fcs:read).
@@ -28,7 +28,7 @@ async def get_fcs_parameters(
 
 
 @router.get("/events", response_model=SuccessResponse)
-async def get_fcs_events(
+def get_fcs_events(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     user_token: tuple = Depends(require_scope(Permission.FCS_READ))
@@ -48,7 +48,7 @@ async def get_fcs_events(
 
 
 @router.post("/upload", response_model=SuccessResponse)
-async def upload_fcs_file(
+def upload_fcs_file(
     file: UploadFile = File(...),
     user_token: tuple = Depends(require_scope(Permission.FCS_WRITE)),
     db: Session = Depends(get_db)
@@ -78,7 +78,7 @@ async def upload_fcs_file(
 
 
 @router.get("/statistics", response_model=SuccessResponse)
-async def get_fcs_statistics(
+def get_fcs_statistics(
     user_token: tuple = Depends(require_scope(Permission.FCS_ANALYZE))
 ):
     """Get statistical analysis of FCS data (requires fcs:analyze).
