@@ -33,6 +33,15 @@ def override_get_db():
 # Override the database dependency
 app.dependency_overrides[get_db] = override_get_db
 
+# Disable rate limiting for tests by clearing middleware
+# Save original middleware
+_original_middleware = app.user_middleware.copy()
+
+# Clear all middleware for testing (removes rate limiting)
+app.user_middleware.clear()
+app.middleware_stack = None  # Force rebuild
+app.build_middleware_stack()  # Rebuild without rate limiting
+
 
 @pytest.fixture(scope="function")
 def test_db():
@@ -125,13 +134,12 @@ def expired_token(test_db: Session, test_user: dict):
     Returns:
         dict: Contains token_id and token (full PAT)
     """
-    from app.services.token_service import TokenService
-    import hashlib
+    from app.core.security import generate_pat_token, hash_token, get_token_prefix
     
     # Generate token
-    token_value = TokenService._generate_token()
-    token_hash = hashlib.sha256(token_value.encode()).hexdigest()
-    token_prefix = token_value[:12]
+    token_value = generate_pat_token()
+    token_hash = hash_token(token_value)
+    token_prefix = get_token_prefix(token_value)
     
     # Create expired token in database
     expired_token = Token(
@@ -141,8 +149,7 @@ def expired_token(test_db: Session, test_user: dict):
         token_prefix=token_prefix,
         token_hash=token_hash,
         scopes=["fcs:read"],
-        expires_at=datetime.utcnow() - timedelta(days=1),  # Expired yesterday
-        is_active=True
+        expires_at=datetime.utcnow() - timedelta(days=1)  # Expired yesterday
     )
     
     test_db.add(expired_token)
