@@ -30,6 +30,32 @@ class FCSService:
         except Exception as e:
             print(f"Warning: Could not load default FCS file: {e}")
     
+    def _get_fcs_value(self, key: str, default: str = '0') -> str:
+        """Get value from FCS text, trying multiple key formats.
+        
+        FCS files may use different key naming conventions:
+        - Standard FCS 3.0: $TOT, $PAR, $P1N
+        - Some files use: TOT, PAR, P1N (without $)
+        - Some files use lowercase: tot, par, p1n
+        
+        Args:
+            key: The key to look up (e.g., 'TOT', 'PAR', 'P1N')
+            default: Default value if key not found
+            
+        Returns:
+            Value from FCS text or default
+        """
+        if not self.default_fcs:
+            return default
+        
+        # Try different formats
+        for k in [f'${key.upper()}', key.upper(), key.lower()]:
+            value = self.default_fcs.text.get(k)
+            if value is not None:
+                return str(value).strip()
+        
+        return default
+    
     def _determine_display(self, param_name: str) -> str:
         """Determine display type based on parameter name.
         
@@ -51,6 +77,28 @@ class FCSService:
         
         return 'LOG'
     
+    @staticmethod
+    def _get_fcs_text_value(fcs_data, key: str, default: str = '0') -> str:
+        """Get value from FCS text dictionary, trying multiple key formats.
+        
+        Static method for use with any FCS data object.
+        
+        Args:
+            fcs_data: FlowIO FCS data object
+            key: The key to look up (e.g., 'TOT', 'PAR', 'P1N')
+            default: Default value if key not found
+            
+        Returns:
+            Value from FCS text or default
+        """
+        # Try different formats
+        for k in [f'${key.upper()}', key.upper(), key.lower()]:
+            value = fcs_data.text.get(k)
+            if value is not None:
+                return str(value).strip()
+        
+        return default
+    
     def get_parameters(self) -> Dict[str, Any]:
         """Get FCS parameters information.
         
@@ -60,16 +108,16 @@ class FCSService:
         if not self.default_fcs:
             raise HTTPException(status_code=500, detail="FCS file not available")
         
-        # Get parameter count
-        param_count = int(self.default_fcs.text.get('$PAR', 0))
-        event_count = int(self.default_fcs.text.get('$TOT', 0))
+        # Get parameter count (try multiple key formats)
+        param_count = int(self._get_fcs_value('PAR', '0'))
+        event_count = int(self._get_fcs_value('TOT', '0'))
         
         # Build parameters list
         parameters = []
         for i in range(1, param_count + 1):
-            pnn = self.default_fcs.text.get(f'$P{i}N', f'P{i}')
-            pns = self.default_fcs.text.get(f'$P{i}S', pnn)
-            pnr = int(self.default_fcs.text.get(f'$P{i}R', 1024))
+            pnn = self._get_fcs_value(f'P{i}N', f'P{i}')
+            pns = self._get_fcs_value(f'P{i}S', pnn)
+            pnr = int(self._get_fcs_value(f'P{i}R', '1024'))
             
             # Determine display type based on parameter name
             display = self._determine_display(pnn)
@@ -113,7 +161,7 @@ class FCSService:
         # Get parameter names
         param_names = []
         for i in range(1, self.default_fcs.channel_count + 1):
-            param_names.append(self.default_fcs.text.get(f'$P{i}N', f'P{i}'))
+            param_names.append(self._get_fcs_value(f'P{i}N', f'P{i}'))
         
         # Convert to list of dictionaries
         events = []
@@ -145,8 +193,8 @@ class FCSService:
         # Calculate statistics for each parameter
         statistics = []
         for i in range(self.default_fcs.channel_count):
-            pnn = self.default_fcs.text.get(f'$P{i+1}N', f'P{i+1}')
-            pns = self.default_fcs.text.get(f'$P{i+1}S', pnn)
+            pnn = self._get_fcs_value(f'P{i+1}N', f'P{i+1}')
+            pns = self._get_fcs_value(f'P{i+1}S', pnn)
             
             # Determine display type based on parameter name
             display = self._determine_display(pnn)
@@ -203,8 +251,8 @@ class FCSService:
         # Parse FCS file to get metadata
         try:
             fcs_data = flowio.FlowData(file_path)
-            total_events = int(fcs_data.text.get('$TOT', 0))
-            total_parameters = int(fcs_data.text.get('$PAR', 0))
+            total_events = int(self._get_fcs_text_value(fcs_data, 'TOT', '0'))
+            total_parameters = int(self._get_fcs_text_value(fcs_data, 'PAR', '0'))
         except Exception as e:
             os.remove(file_path)
             raise HTTPException(status_code=400, detail=f"Invalid FCS file: {str(e)}")
