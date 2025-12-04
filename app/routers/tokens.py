@@ -1,9 +1,10 @@
 """Token management endpoints."""
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
+from app.models.audit_log import AuditLog
 from app.schemas.token import TokenCreate, TokenResponse, TokenListItem, TokenDetailResponse
 from app.schemas.audit_log import AuditLogResponse, AuditLogListResponse
 from app.schemas.common import SuccessResponse
@@ -143,6 +144,8 @@ def revoke_token(
 @router.get("/{token_id}/logs", response_model=SuccessResponse)
 def get_token_audit_logs(
     token_id: str,
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -150,6 +153,8 @@ def get_token_audit_logs(
     
     Args:
         token_id: Token ID
+        limit: Maximum number of logs to return (1-1000, default 50)
+        offset: Offset for pagination (default 0)
         current_user: Current authenticated user
         db: Database session
         
@@ -159,8 +164,13 @@ def get_token_audit_logs(
     # Verify token belongs to user
     token = TokenService.get_token(db, current_user.id, token_id)
     
-    # Get logs
-    token, logs = get_token_logs(db, token_id)
+    # Get all logs for count
+    all_logs = db.query(AuditLog).filter(
+        AuditLog.token_id == token_id
+    ).order_by(AuditLog.timestamp.desc()).all()
+    
+    # Apply pagination
+    logs = all_logs[offset:offset+limit]
     
     log_list = [
         {
@@ -179,7 +189,9 @@ def get_token_audit_logs(
         data={
             "token_id": token.id,
             "token_name": token.name,
-            "total_logs": len(log_list),
+            "total_logs": len(all_logs),
+            "limit": limit,
+            "offset": offset,
             "logs": log_list
         }
     )

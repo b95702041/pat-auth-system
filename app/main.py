@@ -5,7 +5,8 @@ from fastapi.exceptions import RequestValidationError
 from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
-from app.middleware.rate_limit import limiter
+from app.middleware.rate_limit import limiter, RateLimitMiddleware
+from app.middleware.audit import AuditMiddleware
 from app.routers import auth, tokens, workspaces, users, fcs
 
 settings = get_settings()
@@ -19,7 +20,12 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add rate limiter
+# Add middlewares (execution order: Rate Limit -> Audit)
+# Note: Middleware registration is in reverse order of execution
+app.add_middleware(AuditMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+
+# Add rate limiter (for backwards compatibility with SlowAPI decorators)
 app.state.limiter = limiter
 
 

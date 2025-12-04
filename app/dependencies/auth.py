@@ -167,6 +167,10 @@ def require_scope(required_scope: str) -> Callable:
     ) -> AuthContext:
         user, token = user_token
         
+        # Set token_id in request state for audit middleware
+        request.state.token_id = token.id
+        request.state.authorized = True
+        
         # Check permission (new signature returns tuple)
         has_permission, granted_by = check_permission(token.scopes, required_scope)
         
@@ -184,6 +188,10 @@ def require_scope(required_scope: str) -> Callable:
         )
         
         if not has_permission:
+            # Set audit info for middleware
+            request.state.authorized = False
+            request.state.audit_reason = "Insufficient permissions"
+            
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={
