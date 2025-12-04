@@ -9,11 +9,17 @@ class TokenCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     scopes: List[str] = Field(..., min_items=1)
     expires_in_days: int = Field(..., ge=1, le=365)
+    allowed_ips: Optional[List[str]] = Field(None, description="List of allowed IP addresses (supports CIDR notation)")
 
 
 class TokenRegenerate(BaseModel):
     """Schema for regenerating a PAT."""
     expires_in_days: Optional[int] = Field(None, ge=1, le=365, description="Optional: extend expiration time")
+
+
+class TokenUpdateAllowedIPs(BaseModel):
+    """Schema for updating token IP whitelist."""
+    allowed_ips: Optional[List[str]] = Field(None, description="List of allowed IP addresses (null or empty = no restriction)")
 
 
 class TokenResponse(BaseModel):

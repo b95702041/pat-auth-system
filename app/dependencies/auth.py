@@ -5,6 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 from sqlalchemy.orm import Session
 from datetime import datetime
+import ipaddress
 
 from app.config import get_settings
 from app.database import get_db
@@ -131,6 +132,59 @@ def get_current_user_from_pat(
                 "message": "Token expired"
             }
         )
+    
+    # Check IP whitelist if configured
+    if valid_token.allowed_ips is not None and len(valid_token.allowed_ips) > 0:
+        client_ip = request.client.host if request.client else None
+        
+        if not client_ip:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "success": False,
+                    "error": "Forbidden",
+                    "message": "Unable to determine client IP address"
+                }
+            )
+        
+        # Check if client IP is in whitelist
+        ip_allowed = False
+        try:
+            client_ip_obj = ipaddress.ip_address(client_ip)
+            
+            for allowed_ip in valid_token.allowed_ips:
+                try:
+                    # Check if it's a CIDR range
+                    if '/' in allowed_ip:
+                        network = ipaddress.ip_network(allowed_ip, strict=False)
+                        if client_ip_obj in network:
+                            ip_allowed = True
+                            break
+                    else:
+                        # Single IP address
+                        if str(client_ip_obj) == allowed_ip:
+                            ip_allowed = True
+                            break
+                except (ValueError, TypeError):
+                    # Invalid IP format in whitelist, skip
+                    continue
+        except (ValueError, TypeError):
+            # Invalid client IP
+            pass
+        
+        if not ip_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "success": False,
+                    "error": "Forbidden",
+                    "message": "IP address not allowed",
+                    "data": {
+                        "your_ip": client_ip,
+                        "allowed_ips": valid_token.allowed_ips
+                    }
+                }
+            )
     
     # Update last used time
     valid_token.last_used_at = datetime.utcnow()

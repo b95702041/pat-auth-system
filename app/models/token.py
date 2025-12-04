@@ -16,6 +16,7 @@ class Token(Base):
     token_prefix = Column(String(12), index=True, nullable=False)  # pat_ + 8 chars = 12 chars
     token_hash = Column(String, nullable=False)  # SHA-256 hash
     scopes = Column(JSON, nullable=False)  # List of scopes
+    allowed_ips = Column(JSON, nullable=True)  # List of allowed IP addresses (null = no restriction)
     is_revoked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)

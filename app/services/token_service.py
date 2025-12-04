@@ -41,6 +41,7 @@ class TokenService:
             token_prefix=token_prefix,
             token_hash=token_hash,
             scopes=token_data.scopes,
+            allowed_ips=token_data.allowed_ips,
             expires_at=expires_at
         )
         
@@ -163,3 +164,31 @@ class TokenService:
         db.refresh(token)
         
         return token, new_full_token
+    
+    @staticmethod
+    def update_allowed_ips(db: Session, user_id: str, token_id: str, allowed_ips: list = None) -> Token:
+        """Update token IP whitelist.
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            token_id: Token ID
+            allowed_ips: List of allowed IP addresses (null or empty list = no restriction)
+            
+        Returns:
+            Updated token
+            
+        Raises:
+            HTTPException: If token not found
+        """
+        token = TokenService.get_token(db, user_id, token_id)
+        
+        # Convert empty list to None (no restriction)
+        if allowed_ips is not None and len(allowed_ips) == 0:
+            allowed_ips = None
+        
+        token.allowed_ips = allowed_ips
+        db.commit()
+        db.refresh(token)
+        
+        return token

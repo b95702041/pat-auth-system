@@ -10,7 +10,8 @@ tests/
 ├── test_permissions.py      # 權限層級繼承測試
 ├── test_token_expiry.py     # Token 過期和撤銷測試
 ├── test_token_storage.py    # Token 安全儲存測試
-└── test_token_regenerate.py # Token 重新產生測試
+├── test_token_regenerate.py # Token 重新產生測試
+└── test_token_ip_whitelist.py # Token IP 白名單測試
 ```
 
 ## Fixtures 說明
@@ -143,6 +144,39 @@ pytest tests/ --cov=app --cov-report=html
 
 - **test_regenerate_resets_created_at**:
   - 重新產生後 created_at 更新為當前時間
+
+### 5. Token IP 白名單測試 (test_token_ip_whitelist.py)
+
+驗證 token IP 白名單功能：
+
+- **test_create_token_with_ip_whitelist**:
+  - 建立有 IP 限制的 token
+  - 支援 IP 列表
+
+- **test_create_token_without_ip_restriction**:
+  - 建立無 IP 限制的 token（null）
+
+- **test_token_with_matching_ip_works**:
+  - 符合白名單 IP 的請求可以通過
+  - localhost (127.0.0.1) 驗證
+
+- **test_token_with_cidr_range_works**:
+  - 支援 CIDR 範圍（如 127.0.0.0/8）
+  - 範圍內的 IP 可以通過
+
+- **test_update_token_ip_whitelist**:
+  - 可以更新 token 的 IP 白名單
+  - 更新後立即生效
+
+- **test_remove_ip_restriction**:
+  - 可以移除 IP 限制（設為 null）
+
+- **test_remove_ip_restriction_with_empty_list**:
+  - 空陣列等同於 null（無限制）
+
+- **test_cannot_update_other_users_token_ips**:
+  - 無法更新其他使用者的 token IP 白名單
+  - 返回 404 錯誤
 
 ## 測試資料庫
 

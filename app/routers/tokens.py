@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.audit_log import AuditLog
-from app.schemas.token import TokenCreate, TokenRegenerate, TokenResponse, TokenListItem, TokenDetailResponse
+from app.schemas.token import TokenCreate, TokenRegenerate, TokenUpdateAllowedIPs, TokenResponse, TokenListItem, TokenDetailResponse
 from app.schemas.audit_log import AuditLogResponse, AuditLogListResponse
 from app.schemas.common import SuccessResponse
 from app.services.token_service import TokenService
@@ -241,6 +241,57 @@ def regenerate_token(
             "name": token.name,
             "token": new_full_token,  # Full token shown only once
             "scopes": token.scopes,
+            "created_at": token.created_at.isoformat(),
+            "expires_at": token.expires_at.isoformat()
+        }
+    )
+
+
+@router.put("/{token_id}/allowed-ips", response_model=SuccessResponse, status_code=status.HTTP_200_OK)
+def update_token_allowed_ips(
+    token_id: str,
+    update_data: TokenUpdateAllowedIPs,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update token IP whitelist.
+    
+    Set allowed IP addresses for this token. Only requests from these IPs
+    will be able to use the token. Supports individual IPs and CIDR notation.
+    
+    Args:
+        token_id: Token ID to update
+        update_data: IP whitelist data (null or empty list = no restriction)
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        Updated token details
+        
+    Raises:
+        404: Token not found
+    
+    Examples:
+        - Individual IPs: ["192.168.1.100", "10.0.0.1"]
+        - CIDR ranges: ["192.168.1.0/24", "10.0.0.0/8"]
+        - No restriction: null or []
+    """
+    # Update allowed IPs
+    token = TokenService.update_allowed_ips(
+        db,
+        current_user.id,
+        token_id,
+        update_data.allowed_ips
+    )
+    
+    return SuccessResponse(
+        data={
+            "id": token.id,
+            "name": token.name,
+            "token_prefix": token.token_prefix,
+            "scopes": token.scopes,
+            "allowed_ips": token.allowed_ips,
+            "is_revoked": token.is_revoked,
             "created_at": token.created_at.isoformat(),
             "expires_at": token.expires_at.isoformat()
         }

@@ -259,6 +259,7 @@ def test_regenerate_resets_created_at(test_client, test_user):
     
     # Verify created_at was updated
     assert new_created > original_created
+    
     assert (new_created - original_created).total_seconds() >= 2
 
 
