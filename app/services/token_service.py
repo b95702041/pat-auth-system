@@ -112,3 +112,54 @@ class TokenService:
         db.refresh(token)
         
         return token
+    
+    @staticmethod
+    def regenerate_token(db: Session, user_id: str, token_id: str, expires_in_days: int = None) -> tuple[Token, str]:
+        """Regenerate a token with new token string.
+        
+        This keeps the same name and scopes but generates a new token string.
+        The old token is automatically invalidated.
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            token_id: Token ID
+            expires_in_days: Optional new expiration period. If None, keeps original expiration time.
+            
+        Returns:
+            Tuple of (updated_token, new_full_token_string)
+            
+        Raises:
+            HTTPException: If token not found or already revoked
+        """
+        # Get existing token
+        token = TokenService.get_token(db, user_id, token_id)
+        
+        # Check if already revoked
+        if token.is_revoked:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot regenerate a revoked token"
+            )
+        
+        # Generate new token
+        new_full_token = generate_pat_token()
+        new_token_hash = hash_token(new_full_token)
+        new_token_prefix = get_token_prefix(new_full_token)
+        
+        # Update token record
+        token.token_prefix = new_token_prefix
+        token.token_hash = new_token_hash
+        token.created_at = datetime.utcnow()
+        
+        # Update expiration if specified
+        if expires_in_days is not None:
+            token.expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+        
+        # Reset last_used_at
+        token.last_used_at = None
+        
+        db.commit()
+        db.refresh(token)
+        
+        return token, new_full_token

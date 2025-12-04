@@ -11,6 +11,11 @@ class TokenCreate(BaseModel):
     expires_in_days: int = Field(..., ge=1, le=365)
 
 
+class TokenRegenerate(BaseModel):
+    """Schema for regenerating a PAT."""
+    expires_in_days: Optional[int] = Field(None, ge=1, le=365, description="Optional: extend expiration time")
+
+
 class TokenResponse(BaseModel):
     """Schema for token creation response (includes full token)."""
     id: str

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.audit_log import AuditLog
-from app.schemas.token import TokenCreate, TokenResponse, TokenListItem, TokenDetailResponse
+from app.schemas.token import TokenCreate, TokenRegenerate, TokenResponse, TokenListItem, TokenDetailResponse
 from app.schemas.audit_log import AuditLogResponse, AuditLogListResponse
 from app.schemas.common import SuccessResponse
 from app.services.token_service import TokenService
@@ -193,5 +193,55 @@ def get_token_audit_logs(
             "limit": limit,
             "offset": offset,
             "logs": log_list
+        }
+    )
+
+
+@router.post("/{token_id}/regenerate", response_model=SuccessResponse, status_code=status.HTTP_200_OK)
+def regenerate_token(
+    token_id: str,
+    regenerate_data: TokenRegenerate = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Regenerate a token with new token string.
+    
+    Keeps the same name and scopes but generates a new token string.
+    The old token is automatically invalidated (new hash replaces old one).
+    
+    Args:
+        token_id: Token ID to regenerate
+        regenerate_data: Optional expiration extension
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        Regenerated token with new full token string (shown only once)
+        
+    Raises:
+        404: Token not found
+        400: Token is already revoked
+    """
+    # Default to None if no body provided
+    expires_in_days = None
+    if regenerate_data and regenerate_data.expires_in_days is not None:
+        expires_in_days = regenerate_data.expires_in_days
+    
+    # Regenerate token
+    token, new_full_token = TokenService.regenerate_token(
+        db, 
+        current_user.id, 
+        token_id,
+        expires_in_days
+    )
+    
+    return SuccessResponse(
+        data={
+            "id": token.id,
+            "name": token.name,
+            "token": new_full_token,  # Full token shown only once
+            "scopes": token.scopes,
+            "created_at": token.created_at.isoformat(),
+            "expires_at": token.expires_at.isoformat()
         }
     )

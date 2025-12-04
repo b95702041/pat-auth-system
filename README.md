@@ -228,6 +228,7 @@ pat-auth-system/
 │   ├── test_permissions.py     # 權限階層測試（4 個測試）
 │   ├── test_token_expiry.py    # Token 過期測試（5 個測試）
 │   ├── test_token_storage.py   # Token 安全測試（5 個測試）
+│   ├── test_token_regenerate.py # Token 重新產生測試（7 個測試）
 │   └── README.md               # 測試說明文件
 │
 └── data/                       # 資料檔案
@@ -387,7 +388,44 @@ curl -X GET "http://localhost:8000/api/v1/tokens/$TOKEN_ID/logs" \
   -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
-### 6. 撤銷 Token
+### 6. 重新產生 Token
+
+```bash
+TOKEN_ID="abc123..."
+
+# 重新產生 Token（保持原有過期時間）
+curl -X POST "http://localhost:8000/api/v1/tokens/$TOKEN_ID/regenerate" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+# 重新產生並延長過期時間
+curl -X POST "http://localhost:8000/api/v1/tokens/$TOKEN_ID/regenerate" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"expires_in_days": 90}'
+
+# 回應範例
+{
+  "success": true,
+  "data": {
+    "id": "abc123...",
+    "name": "原本的 name",
+    "token": "pat_新的完整token...",  # 新 token，僅此一次顯示
+    "scopes": ["原本的 scopes"],
+    "created_at": "新的時間",
+    "expires_at": "新的或原本的到期時間"
+  }
+}
+```
+
+**注意**：
+- 舊的 token 會自動失效
+- 新的 token 僅顯示一次，請務必儲存
+- name 和 scopes 保持不變
+- 可選擇性延長過期時間
+
+### 7. 撤銷 Token
 
 ```bash
 curl -X DELETE "http://localhost:8000/api/v1/tokens/$TOKEN_ID" \
@@ -581,6 +619,7 @@ DEFAULT_FCS_FILE=data/0000123456_1234567_AML_ClearLLab10C_TTube.fcs
 - `POST /api/v1/tokens` - 建立 PAT
 - `GET /api/v1/tokens` - 列出所有 PAT
 - `GET /api/v1/tokens/{id}` - 取得單一 PAT 詳情
+- `POST /api/v1/tokens/{id}/regenerate` - 重新產生 PAT（保留 name 和 scopes）
 - `DELETE /api/v1/tokens/{id}` - 撤銷 PAT
 - `GET /api/v1/tokens/{id}/logs` - 取得 PAT 使用日誌
 

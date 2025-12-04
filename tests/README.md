@@ -9,7 +9,8 @@ tests/
 ├── conftest.py              # 測試配置和 fixtures
 ├── test_permissions.py      # 權限層級繼承測試
 ├── test_token_expiry.py     # Token 過期和撤銷測試
-└── test_token_storage.py    # Token 安全儲存測試
+├── test_token_storage.py    # Token 安全儲存測試
+└── test_token_regenerate.py # Token 重新產生測試
 ```
 
 ## Fixtures 說明
@@ -115,6 +116,33 @@ pytest tests/ --cov=app --cov-report=html
 
 - **test_multiple_tokens_have_different_hashes**:
   - 不同 token 產生不同 hash
+
+### 4. Token 重新產生測試 (test_token_regenerate.py)
+
+驗證 token 重新產生功能：
+
+- **test_regenerate_token_creates_new_token_string**:
+  - 重新產生後獲得新的 token 字串
+  - 舊 token 自動失效
+  - 保持相同的 name 和 scopes
+
+- **test_regenerate_token_with_extended_expiration**:
+  - 可以延長過期時間
+  - 新的過期時間正確計算
+
+- **test_regenerate_token_without_expiration_keeps_original**:
+  - 不指定過期時間時保持原有過期時間
+
+- **test_cannot_regenerate_revoked_token**:
+  - 已撤銷的 token 無法重新產生
+  - 返回 400 錯誤
+
+- **test_cannot_regenerate_other_users_token**:
+  - 無法重新產生其他使用者的 token
+  - 返回 404 錯誤
+
+- **test_regenerate_resets_created_at**:
+  - 重新產生後 created_at 更新為當前時間
 
 ## 測試資料庫
 
