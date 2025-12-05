@@ -42,6 +42,7 @@ def upgrade() -> None:
         sa.Column('token_prefix', sa.String(length=12), nullable=False),
         sa.Column('token_hash', sa.String(), nullable=False),
         sa.Column('scopes', sa.JSON(), nullable=False),
+        sa.Column('allowed_ips', sa.JSON(), nullable=True),
         sa.Column('is_revoked', sa.Boolean(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('expires_at', sa.DateTime(), nullable=False),
