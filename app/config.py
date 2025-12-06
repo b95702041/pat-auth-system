@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     
+    # Redis Cache
+    REDIS_URL: str = "redis://localhost:6379/0"
+    TOKEN_CACHE_TTL: int = 300  # 5 minutes
+    
     # Token
     TOKEN_PREFIX: str = "pat_"
     TOKEN_LENGTH: int = 32

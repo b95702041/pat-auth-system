@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from app.models.token import Token
 from app.schemas.token import TokenCreate
 from app.core.security import generate_pat_token, hash_token, get_token_prefix
+from app.services import cache_service
 
 
 class TokenService:
@@ -112,6 +113,9 @@ class TokenService:
         db.commit()
         db.refresh(token)
         
+        # Invalidate cache
+        cache_service.invalidate_token_cache(token.token_hash)
+        
         return token
     
     @staticmethod
@@ -143,6 +147,9 @@ class TokenService:
                 detail="Cannot regenerate a revoked token"
             )
         
+        # Save old token hash for cache invalidation
+        old_token_hash = token.token_hash
+        
         # Generate new token
         new_full_token = generate_pat_token()
         new_token_hash = hash_token(new_full_token)
@@ -162,6 +169,9 @@ class TokenService:
         
         db.commit()
         db.refresh(token)
+        
+        # Invalidate old token cache
+        cache_service.invalidate_token_cache(old_token_hash)
         
         return token, new_full_token
     
@@ -190,5 +200,8 @@ class TokenService:
         token.allowed_ips = allowed_ips
         db.commit()
         db.refresh(token)
+        
+        # Invalidate cache when IP whitelist changes
+        cache_service.invalidate_token_cache(token.token_hash)
         
         return token

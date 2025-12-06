@@ -13,9 +13,10 @@ from app.models.user import User
 from app.models.token import Token
 from app.schemas.user import TokenData
 from app.schemas.auth import AuthContext
-from app.core.security import verify_token_hash, verify_token
+from app.core.security import verify_token_hash, verify_token, hash_token
 from app.core.permissions import check_permission
 from app.services.audit_service import log_token_usage
+from app.services import cache_service
 
 settings = get_settings()
 security = HTTPBearer()
@@ -77,6 +78,66 @@ def get_current_user_from_pat(
         )
     
     token_string = authorization.replace("Bearer ", "")
+    
+    # Calculate token hash for cache lookup
+    token_hash = hash_token(token_string)
+    
+    # Try to get cached token data
+    cached_data = cache_service.get_cached_token(token_hash)
+    if cached_data:
+        # Cache hit! Validate cached data
+        if not cached_data.get("is_revoked", False):
+            # Check IP whitelist for cached token
+            cached_allowed_ips = cached_data.get("allowed_ips")
+            if cached_allowed_ips is not None and len(cached_allowed_ips) > 0:
+                client_ip = request.client.host if request.client else None
+                if client_ip and client_ip != "testclient":
+                    # Validate IP (same logic as below)
+                    ip_allowed = False
+                    try:
+                        client_ip_obj = ipaddress.ip_address(client_ip)
+                        for allowed_ip in cached_allowed_ips:
+                            try:
+                                if '/' in allowed_ip:
+                                    network = ipaddress.ip_network(allowed_ip, strict=False)
+                                    if client_ip_obj in network:
+                                        ip_allowed = True
+                                        break
+                                else:
+                                    if str(client_ip_obj) == allowed_ip:
+                                        ip_allowed = True
+                                        break
+                            except (ValueError, TypeError):
+                                continue
+                    except (ValueError, TypeError):
+                        pass
+                    
+                    if not ip_allowed:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail={
+                                "success": False,
+                                "error": "Forbidden",
+                                "message": "IP address not allowed",
+                                "data": {
+                                    "your_ip": client_ip,
+                                    "allowed_ips": cached_allowed_ips
+                                }
+                            }
+                        )
+            
+            # Get user from cache
+            user = db.query(User).filter(User.id == cached_data["user_id"]).first()
+            if user:
+                # Reconstruct token object from cache
+                valid_token = db.query(Token).filter(Token.id == cached_data["token_id"]).first()
+                if valid_token:
+                    # Update last used time (async would be better but keeping it simple)
+                    valid_token.last_used_at = datetime.utcnow()
+                    db.commit()
+                    return user, valid_token
+    
+    # Cache miss or invalid cache - proceed with normal validation
     
     # Get token prefix for lookup
     token_prefix = token_string[:len(settings.TOKEN_PREFIX) + settings.TOKEN_PREFIX_DISPLAY_LENGTH]
@@ -147,53 +208,58 @@ def get_current_user_from_pat(
                 }
             )
         
-        # Skip IP validation for TestClient (used in pytest)
-        if client_ip == "testclient":
-            # TestClient doesn't provide real IP addresses, skip validation
-            pass
-        else:
-            # Check if client IP is in whitelist
-            ip_allowed = False
-            try:
-                client_ip_obj = ipaddress.ip_address(client_ip)
-                
-                for allowed_ip in valid_token.allowed_ips:
-                    try:
-                        # Check if it's a CIDR range
-                        if '/' in allowed_ip:
-                            network = ipaddress.ip_network(allowed_ip, strict=False)
-                            if client_ip_obj in network:
-                                ip_allowed = True
-                                break
-                        else:
-                            # Single IP address
-                            if str(client_ip_obj) == allowed_ip:
-                                ip_allowed = True
-                                break
-                    except (ValueError, TypeError):
-                        # Invalid IP format in whitelist, skip
-                        continue
-            except (ValueError, TypeError):
-                # Invalid client IP
-                pass
+        # Check if client IP is in whitelist
+        ip_allowed = False
+        try:
+            client_ip_obj = ipaddress.ip_address(client_ip)
             
-            if not ip_allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail={
-                        "success": False,
-                        "error": "Forbidden",
-                        "message": "IP address not allowed",
-                        "data": {
-                            "your_ip": client_ip,
-                            "allowed_ips": valid_token.allowed_ips
-                        }
+            for allowed_ip in valid_token.allowed_ips:
+                try:
+                    # Check if it's a CIDR range
+                    if '/' in allowed_ip:
+                        network = ipaddress.ip_network(allowed_ip, strict=False)
+                        if client_ip_obj in network:
+                            ip_allowed = True
+                            break
+                    else:
+                        # Single IP address
+                        if str(client_ip_obj) == allowed_ip:
+                            ip_allowed = True
+                            break
+                except (ValueError, TypeError):
+                    # Invalid IP format in whitelist, skip
+                    continue
+        except (ValueError, TypeError):
+            # Invalid client IP
+            pass
+        
+        if not ip_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "success": False,
+                    "error": "Forbidden",
+                    "message": "IP address not allowed",
+                    "data": {
+                        "your_ip": client_ip,
+                        "allowed_ips": valid_token.allowed_ips
                     }
-                )
+                }
+            )
     
     # Update last used time
     valid_token.last_used_at = datetime.utcnow()
     db.commit()
+    
+    # Cache the validated token
+    cache_service.cache_token(token_hash, {
+        "token_id": valid_token.id,
+        "user_id": valid_token.user_id,
+        "scopes": valid_token.scopes,
+        "allowed_ips": valid_token.allowed_ips,
+        "is_revoked": valid_token.is_revoked,
+        "expires_at": valid_token.expires_at.isoformat()
+    })
     
     # Get user
     user = db.query(User).filter(User.id == valid_token.user_id).first()

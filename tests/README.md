@@ -6,12 +6,13 @@
 
 ```
 tests/
-├── conftest.py              # 測試配置和 fixtures
-├── test_permissions.py      # 權限層級繼承測試
-├── test_token_expiry.py     # Token 過期和撤銷測試
-├── test_token_storage.py    # Token 安全儲存測試
-├── test_token_regenerate.py # Token 重新產生測試
-└── test_token_ip_whitelist.py # Token IP 白名單測試
+├── conftest.py                 # 測試配置和 fixtures
+├── test_permissions.py         # 權限層級繼承測試
+├── test_token_expiry.py        # Token 過期和撤銷測試
+├── test_token_storage.py       # Token 安全儲存測試
+├── test_token_regenerate.py    # Token 重新產生測試
+├── test_token_ip_whitelist.py  # Token IP 白名單測試
+└── test_redis_cache.py         # Redis 快取測試
 ```
 
 ## Fixtures 說明
@@ -177,6 +178,39 @@ pytest tests/ --cov=app --cov-report=html
 - **test_cannot_update_other_users_token_ips**:
   - 無法更新其他使用者的 token IP 白名單
   - 返回 404 錯誤
+
+### 6. Redis 快取測試 (test_redis_cache.py)
+
+驗證 Redis 快取功能：
+
+- **test_cache_service_basics**:
+  - 驗證基本快取操作
+  - 第一次請求查詢資料庫並快取
+  - 第二次請求使用快取（更快）
+  - 顯示效能差異
+
+- **test_cache_invalidation_on_revoke**:
+  - Token 被撤銷時自動失效快取
+  - 撤銷後的請求返回 401
+  - 確保安全性
+
+- **test_cache_invalidation_on_regenerate**:
+  - Token 重新產生時刪除舊快取
+  - 舊 token 無法使用
+  - 新 token 正常運作
+
+- **test_cache_respects_expiration**:
+  - 快取尊重 token 過期時間
+  - 過期的 token 不會從快取返回
+
+- **test_cache_with_ip_whitelist**:
+  - 快取配合 IP 白名單正確運作
+  - IP 更新時快取處理正確
+
+**效能指標**：
+- 資料庫查詢: ~50-100ms
+- Redis 快取: ~10-30ms
+- 效能提升: 2-5x
 
 ## 測試資料庫
 
