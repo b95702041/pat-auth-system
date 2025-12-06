@@ -539,32 +539,25 @@ curl -X DELETE "http://localhost:8000/api/v1/tokens/$TOKEN_ID" \
 
 **查看幫助**：
 ```bash
-# 顯示所有命令
 docker-compose exec api python -m app.cli --help
-
-# 或使用 make
-make cli-help
 ```
 
 **管理用戶**：
 ```bash
 # 列出所有用戶
 docker-compose exec api python -m app.cli users list
-make cli-users
 ```
 
 **管理 Token**：
 ```bash
-# 列出所有 Token
+# 列出所有活躍 Token
 docker-compose exec api python -m app.cli tokens list
-make cli-tokens
 
 # 列出特定用戶的 Token
 docker-compose exec api python -m app.cli tokens list --user-id <user_id>
 
 # 列出所有 Token（包含已撤銷）
 docker-compose exec api python -m app.cli tokens list --all
-make cli-tokens-all
 
 # 查看 Token 詳細資訊
 docker-compose exec api python -m app.cli tokens info <token_id>
@@ -584,7 +577,6 @@ docker-compose exec api python -m app.cli tokens create \
 ```bash
 # 顯示系統統計資訊
 docker-compose exec api python -m app.cli stats
-make cli-stats
 
 # 輸出範例：
 # Total Users: 10
@@ -598,24 +590,31 @@ make cli-stats
 ```bash
 # 預覽會刪除的 Token（不實際刪除）
 docker-compose exec api python -m app.cli tokens cleanup --days 30 --dry-run
-make cli-cleanup
 
 # 實際刪除過期超過 30 天的 Token
 docker-compose exec api python -m app.cli tokens cleanup --days 30
 ```
 
-### Makefile 快捷命令
+### Makefile 快捷命令（可選）
+
+如果你在主機上安裝了 `make`，可以使用更短的命令：
 
 ```bash
-make cli-help        # CLI 幫助
-make cli-users       # 列出用戶
-make cli-tokens      # 列出 Token
-make cli-tokens-all  # 列出所有 Token
-make cli-stats       # 系統統計
-make cli-cleanup     # 清理預覽
+# 安裝 make（EC2/Linux）
+sudo yum install -y make
+
+# 使用快捷命令
+make cli-help        # = docker-compose exec api python -m app.cli --help
+make cli-users       # = docker-compose exec api python -m app.cli users list
+make cli-tokens      # = docker-compose exec api python -m app.cli tokens list
+make cli-tokens-all  # = docker-compose exec api python -m app.cli tokens list --all
+make cli-stats       # = docker-compose exec api python -m app.cli stats
+make cli-cleanup     # = docker-compose exec api python -m app.cli tokens cleanup --dry-run
 make db-shell        # PostgreSQL shell
 make redis-cli       # Redis CLI
 ```
+
+**注意**：Makefile 快捷命令是可選的，如果不想安裝 make，直接使用上面的完整 `docker-compose exec` 命令即可。
 
 ## 🧪 執行測試
 
