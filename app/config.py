@@ -1,5 +1,6 @@
 """Application configuration."""
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from functools import lru_cache
 
 
@@ -32,9 +33,10 @@ class Settings(BaseSettings):
     # FCS
     DEFAULT_FCS_FILE: str = "data/0000123456_1234567_AML_ClearLLab10C_TTube.fcs"
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=True
+    )
 
 
 @lru_cache()

@@ -1,5 +1,5 @@
 """Token schemas."""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import List, Optional
 
@@ -7,7 +7,7 @@ from typing import List, Optional
 class TokenCreate(BaseModel):
     """Schema for creating a PAT."""
     name: str = Field(..., min_length=1, max_length=100)
-    scopes: List[str] = Field(..., min_items=1)
+    scopes: List[str] = Field(..., min_length=1)
     expires_in_days: int = Field(..., ge=1, le=365)
     allowed_ips: Optional[List[str]] = Field(None, description="List of allowed IP addresses (supports CIDR notation)")
 
@@ -31,8 +31,7 @@ class TokenResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TokenListItem(BaseModel):
@@ -46,8 +45,7 @@ class TokenListItem(BaseModel):
     last_used_at: Optional[datetime]
     is_revoked: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TokenListResponse(BaseModel):
@@ -67,5 +65,4 @@ class TokenDetailResponse(BaseModel):
     last_used_at: Optional[datetime]
     is_revoked: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

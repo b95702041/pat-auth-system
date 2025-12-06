@@ -1,5 +1,5 @@
 """Authentication schemas."""
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
 
 
@@ -11,5 +11,4 @@ class AuthContext(BaseModel):
     granted_by: str  # The actual scope that granted the permission
     user_scopes: List[str]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,5 @@
 """Audit log schemas."""
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import List, Optional
 
@@ -14,8 +14,7 @@ class AuditLogResponse(BaseModel):
     authorized: bool
     reason: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AuditLogListResponse(BaseModel):
