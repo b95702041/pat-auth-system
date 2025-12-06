@@ -531,6 +531,92 @@ curl -X DELETE "http://localhost:8000/api/v1/tokens/$TOKEN_ID" \
   -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
+## 🛠️ CLI 管理工具
+
+系統提供命令列工具方便管理員管理 Token 和用戶。
+
+### 可用命令
+
+**查看幫助**：
+```bash
+# 顯示所有命令
+docker-compose exec api python -m app.cli --help
+
+# 或使用 make
+make cli-help
+```
+
+**管理用戶**：
+```bash
+# 列出所有用戶
+docker-compose exec api python -m app.cli users list
+make cli-users
+```
+
+**管理 Token**：
+```bash
+# 列出所有 Token
+docker-compose exec api python -m app.cli tokens list
+make cli-tokens
+
+# 列出特定用戶的 Token
+docker-compose exec api python -m app.cli tokens list --user-id <user_id>
+
+# 列出所有 Token（包含已撤銷）
+docker-compose exec api python -m app.cli tokens list --all
+make cli-tokens-all
+
+# 查看 Token 詳細資訊
+docker-compose exec api python -m app.cli tokens info <token_id>
+
+# 撤銷 Token
+docker-compose exec api python -m app.cli tokens revoke <token_id>
+
+# 建立 Token（管理員用）
+docker-compose exec api python -m app.cli tokens create \
+  --user-id <user_id> \
+  --name "Admin Token" \
+  --scopes "fcs:read,fcs:write" \
+  --days 90
+```
+
+**系統統計**：
+```bash
+# 顯示系統統計資訊
+docker-compose exec api python -m app.cli stats
+make cli-stats
+
+# 輸出範例：
+# Total Users: 10
+# Total Tokens: 25
+# Active Tokens: 20
+# Revoked Tokens: 5
+# Expired Tokens: 3
+```
+
+**清理過期 Token**：
+```bash
+# 預覽會刪除的 Token（不實際刪除）
+docker-compose exec api python -m app.cli tokens cleanup --days 30 --dry-run
+make cli-cleanup
+
+# 實際刪除過期超過 30 天的 Token
+docker-compose exec api python -m app.cli tokens cleanup --days 30
+```
+
+### Makefile 快捷命令
+
+```bash
+make cli-help        # CLI 幫助
+make cli-users       # 列出用戶
+make cli-tokens      # 列出 Token
+make cli-tokens-all  # 列出所有 Token
+make cli-stats       # 系統統計
+make cli-cleanup     # 清理預覽
+make db-shell        # PostgreSQL shell
+make redis-cli       # Redis CLI
+```
+
 ## 🧪 執行測試
 
 ```bash
