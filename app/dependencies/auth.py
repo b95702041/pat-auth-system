@@ -92,6 +92,11 @@ def get_current_user_from_pat(
             if cached_allowed_ips is not None and len(cached_allowed_ips) > 0:
                 client_ip = request.client.host if request.client else None
                 if client_ip and client_ip != "testclient":
+                    # TODO: Refactor - This nested logic can be improved:
+                    # 1. Extract IP validation into separate function (_is_ip_allowed)
+                    # 2. Use early returns to reduce nesting depth (currently 5 levels)
+                    # 3. Consider using guard clauses for better readability
+                    # Example: if not cached_data or cached_data.get("is_revoked"): return
                     # Validate IP (same logic as below)
                     ip_allowed = False
                     try:
